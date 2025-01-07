@@ -68,18 +68,22 @@ countColor color file = do
   -- Extract the pixel data from the bitmap as a list of RGB trios
   let colorData = ((map fromIntegral) <$>) <$> openBitmap file :: IO [[Int]]
 
+  colorDataLength <- length <$> colorData
+
   -- HACK This deals with non trios of RGB values by returning 0
   case color of
     "red" -> colorData >>= return . sum . map (\list -> case list of { [r,_,_] -> r; (r:_) -> r; _ -> 0 })
+                  >>= \total -> return (total `div` colorDataLength)
     "green" -> colorData >>= return . sum . map (\list -> case list of { [_,g,_] -> g; [_,g] -> g; [_] -> 0; [] -> 0 })
+                  >>= \total -> return (total `div` colorDataLength)
     "blue" -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
+                  >>= \total -> return (total `div` colorDataLength)
     _ -> error "Invalid color"
 
 openBitmap :: FilePath -> IO [[Word8]]
 openBitmap file = do
   bmpData <- B.readFile file
 
-  -- File data
   guard $ (B.take 2 bmpData) == B.pack [0x42, 0x4D] -- Check if the file is internally a bitmap
 
   let offset = runGet getWord32le $ B.drop 10 bmpData -- Offset to the pixel array
