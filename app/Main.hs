@@ -32,6 +32,7 @@ main = do
 
   -- TODO Check if internal contents of bitmap are valid
 
+  -- let sortedFiles = mapM (appendColorCount color) bitmaps
 
   return ()
 
