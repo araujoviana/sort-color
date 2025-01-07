@@ -22,6 +22,9 @@ executable sort-color
     -- other-extensions:
     build-depends:    base ^>=4.18.2.1,
     		      directory,
-		      filepath
+		      filepath,
+		      bytestring,
+		      split,
+		      binary
     hs-source-dirs:   app
     default-language: GHC2021
