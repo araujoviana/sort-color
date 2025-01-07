@@ -37,6 +37,11 @@ main = do
 
 
 
+-- | isolateArgs
+-- | Given a list of strings, returns a tuple containing the folder path, color and order
+-- | If the number of arguments is not 3, return an error message
+-- | If the order is not "asc" or "desc", return an error message
+-- | Otherwise, return the folder path, color and order
 isolateArgs :: [String] -> Either String (FolderPath, Color, Order)
 isolateArgs [f,c,o] =
   let folder = f -- No need to lowercase the folder path
