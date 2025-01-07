@@ -89,4 +89,5 @@ openBitmap file = do
   let offset = runGet getWord32le $ B.drop 10 bmpData -- Offset to the pixel array
       pixelData = B.drop (fromIntegral offset) bmpData -- Extract the pixel data
 
-  return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData -- Split the pixel data into RGB color trios
+  -- Colors are store in BGR format in the bitmap, so we need to reverse the order of the bytes
+  return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData
