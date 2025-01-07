@@ -54,18 +54,30 @@ isolateArgs [f,c,o] =
     _ -> Left "Invalid order"
 isolateArgs _ = Left "Invalid number of arguments"
 
--- TODO
---------------------------------------------------------------
--- appendColorCount :: color -> FilePath -> (Int, FilePath) --
--- appendColorCount color file =                            --
---   let count = countColor color file                      --
---   in (count, file)                                       --
---                                                          --
---                                                          --
--- countColor :: Color -> FilePath -> Int                   --
--- countColor color file =                                  --
---  undefined                                               --
---------------------------------------------------------------
+---------------------------------------------------------------
+-- appendColorCount :: String -> FilePath -> (Int, FilePath) --
+-- appendColorCount color file =                             --
+--   let count = countColor color file                       --
+--   in (count, file)                                        --
+---------------------------------------------------------------
+
+countColor :: Color -> FilePath -> IO Int
+countColor color file = do
+
+  -- Extract the pixel data from the bitmap as a list of RGB trios
+  let colorData = ((map fromIntegral) <$>) <$> openBitmap file :: IO [[Int]]
+
+  case color of
+    "red" -> do
+      colorData >>= return . sum . map (\[r,_,_] -> r)
+    "green"-> do
+      colorData >>= return . sum . map (\[_,g,_] -> g)
+    "blue" -> do
+      colorData >>= return . sum . map (\[_,_,b] -> b)
+    _ -> return 0 -- TODO Deal with invalid color
+
+
+
 
 openBitmap :: FilePath -> IO [[Word8]]
 openBitmap file = do
