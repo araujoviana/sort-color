@@ -24,7 +24,7 @@ usage = "Usage: ./sort-color <folder path> <color> <order>"
 main :: IO ()
 main = do
   args <- getArgs
-  when (isLeft $ isolateArgs args ) $ mapM_ putStrLn ["Invalid arguments", usage]
+  when (isLeft $ isolateArgs args ) $ mapM_ putStrLn ["Invalid arguments", "Usage: ./sort-color <folder path> <color> <order>"]
   let Right (folder, color, order) = isolateArgs args
 
   files <- map (folder </>) <$> listDirectory folder

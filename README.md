@@ -4,7 +4,7 @@ A command-line tool written in Haskell that sorts BMP images in a folder based o
 
 ## How it works
 
-It reads all BMP files in the specified folder and analyzes their pixel data to calculate the intensity of the specified color channel (red, green, or blue). It then sorts the images based on the chosen color channel's intensity in ascending (asc) or descending (desc) order.
+It reads all BMP files in the specified folder and analyzes their pixel data to calculate the intensity of the specified color channel (red, green, or blue). It then sorts the images based on the chosen color channel's intensity in ascending (asc) or descending (desc) order. *Other files in the folder will be ignored!*
 
 ## Requirements
 
