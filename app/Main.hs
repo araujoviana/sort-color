@@ -60,12 +60,20 @@ isolateArgs [f,c,o] =
     _ -> Left "Invalid order"
 isolateArgs _ = Left "Invalid number of arguments"
 
+getFilePaths :: FolderPath -> IO [FilePath]
+getFilePaths folder = map (folder </>) <$> listDirectory folder
 
-appendColorCount :: String -> FilePath -> IO (Int, FilePath)
-appendColorCount color file = do
+getBitmaps :: [FilePath] -> IO [FilePath]
+getBitmaps = filterM (return . L.isSuffixOf ".bmp")
+
+sortByOrder :: Order -> [(Int, FilePath)] -> [(Int, FilePath)]
+sortByOrder Asc = L.sortBy (\(a,_) (b,_) -> compare a b)
+sortByOrder Desc = L.sortBy (\(a,_) (b,_) -> compare b a)
+
+prependColorCount :: String -> FilePath -> IO (Int, FilePath)
+prependColorCount color file = do
   count <- countColor color file
   return (count, file)
-
 
 countColor :: Color -> FilePath -> IO Int
 countColor color file = do
