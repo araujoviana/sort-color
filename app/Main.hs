@@ -41,6 +41,11 @@ main = do
 
   putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFilesWithRank
 
+  forM_ rankedFilesWithRank $ \(rank, file) -> do
+    let filename = takeFileName file
+    let newFile = folder </> show rank <> "-" <> filename
+    renameFile file newFile
+
   return ()
 
 -- | isolateArgs
@@ -94,3 +99,5 @@ openBitmap file = do
 
   -- Colors are store in BGR format in the bitmap, so we need to reverse the order of the bytes
   return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData
+
+
