@@ -2,17 +2,15 @@ module Main where
 
 import Control.Monad
 import Data.Binary.Get
-import Data.Bits
 import Data.Char
 import Data.Either
-import Data.List as L
-import Data.List.Split as S
 import Data.Word
 import System.Directory
 import System.Environment
 import System.FilePath
-import System.IO
 import qualified Data.ByteString.Lazy as B
+import qualified Data.List as L
+import qualified Data.List.Split as S
 
 
 type FolderPath = String -- Path to the folder containing the bitmaps
@@ -34,20 +32,16 @@ main = do
   files <- getFilePaths folder
   bitmaps <- getBitmaps files
 
-  -- TODO Check if internal contents of bitmap are valid
   colorCountedBitmaps <- mapM (prependColorCount color) bitmaps
 
-  let rankedFiles = sortByOrder order colorCountedBitmaps
-      rankedFilesWithRank = zip [1..] $ map snd rankedFiles
+  let rankedFiles = zip [1..] $ sortByOrder order colorCountedBitmaps
 
-  putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFilesWithRank
+  putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFiles
 
-  forM_ rankedFilesWithRank $ \(rank, file) -> do
-    let filename = takeFileName file
-    let newFile = folder </> show rank <> "-" <> filename
-    renameFile file newFile
+  renameBitmaps rankedFiles folder
 
-  return ()
+  putStrLn "Files renamed successfully"
+
 
 isolateArgs :: [String] -> Either String (FolderPath, Color, Order)
 isolateArgs [f,c,o] =
@@ -66,9 +60,9 @@ getFilePaths folder = map (folder </>) <$> listDirectory folder
 getBitmaps :: [FilePath] -> IO [FilePath]
 getBitmaps = filterM (return . L.isSuffixOf ".bmp")
 
-sortByOrder :: Order -> [(Int, FilePath)] -> [(Int, FilePath)]
-sortByOrder Asc = L.sortBy (\(a,_) (b,_) -> compare a b)
-sortByOrder Desc = L.sortBy (\(a,_) (b,_) -> compare b a)
+sortByOrder :: Order -> [(Int, FilePath)] -> [FilePath]
+sortByOrder Asc xs = map snd $ L.sortBy (\(a,_) (b,_) -> compare a b) xs
+sortByOrder Desc xs = map snd $ L.sortBy (\(a,_) (b,_) -> compare b a) xs
 
 prependColorCount :: String -> FilePath -> IO (Int, FilePath)
 prependColorCount color file = do
@@ -105,3 +99,9 @@ openBitmap file = do
   return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData
 
 
+renameBitmaps :: [(Int, FilePath)] -> FilePath -> IO ()
+renameBitmaps rankedFiles folder =
+  forM_ rankedFiles $ \(rank, file) -> do
+    let filename = takeFileName file
+    let newFile = folder </> show rank <> "-" <> filename
+    renameFile file newFile
