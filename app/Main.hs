@@ -14,9 +14,12 @@ import System.FilePath
 import System.IO
 import qualified Data.ByteString.Lazy as B
 
-type FolderPath = String -- Path to the folder containing the files
+
+type FolderPath = String -- Path to the folder containing the bitmaps
 type Color = String
-data Order = Asc | Desc deriving (Show, Read)
+data Order = Asc | Desc deriving (Read)
+
+type Args = (FolderPath, Color, Order) -- Command line arguments
 
 usage :: String
 usage = "Usage: ./sort-color <folder path> <color> <order>"
