@@ -27,19 +27,17 @@ usage = "Usage: ./sort-color <folder path> <color> <order>"
 main :: IO ()
 main = do
   args <- getArgs
-  when (isLeft $ isolateArgs args ) $ mapM_ putStrLn ["Invalid arguments", usage]
+
+  when (isLeft $ isolateArgs args ) $ putStrLn usage
   let Right (folder, color, order) = isolateArgs args
 
-  files <- map (folder </>) <$> listDirectory folder
-  bitmaps <- filterM (return . L.isSuffixOf ".bmp") files
+  files <- getFilePaths folder
+  bitmaps <- getBitmaps files
 
   -- TODO Check if internal contents of bitmap are valid
+  colorCountedBitmaps <- mapM (prependColorCount color) bitmaps
 
-  sortedFiles <- mapM (appendColorCount color) bitmaps :: IO [(Int, FilePath)]
-
-  let rankedFiles = case order of
-        Asc -> L.sortBy (\(a,_) (b,_) -> compare a b) sortedFiles
-        Desc -> L.sortBy (\(a,_) (b,_) -> compare b a) sortedFiles
+  let rankedFiles = sortByOrder order colorCountedBitmaps
       rankedFilesWithRank = zip [1..] $ map snd rankedFiles
 
   putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFilesWithRank
@@ -51,11 +49,6 @@ main = do
 
   return ()
 
--- | isolateArgs
--- | Given a list of strings, returns a tuple containing the folder path, color and order
--- | If the number of arguments is not 3, return an error message
--- | If the order is not "asc" or "desc", return an error message
--- | Otherwise, return the folder path, color and order
 isolateArgs :: [String] -> Either String (FolderPath, Color, Order)
 isolateArgs [f,c,o] =
   let folder = f -- No need to lowercase the folder path
