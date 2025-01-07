@@ -54,30 +54,24 @@ isolateArgs [f,c,o] =
     _ -> Left "Invalid order"
 isolateArgs _ = Left "Invalid number of arguments"
 
----------------------------------------------------------------
--- appendColorCount :: String -> FilePath -> (Int, FilePath) --
--- appendColorCount color file =                             --
---   let count = countColor color file                       --
---   in (count, file)                                        --
----------------------------------------------------------------
+
+appendColorCount :: String -> FilePath -> IO (Int, FilePath)
+appendColorCount color file = do
+  count <- countColor color file
+  return (count, file)
+
 
 countColor :: Color -> FilePath -> IO Int
 countColor color file = do
-
   -- Extract the pixel data from the bitmap as a list of RGB trios
   let colorData = ((map fromIntegral) <$>) <$> openBitmap file :: IO [[Int]]
 
+  -- HACK This deals with non trios of RGB values by returning 0
   case color of
-    "red" -> do
-      colorData >>= return . sum . map (\[r,_,_] -> r)
-    "green"-> do
-      colorData >>= return . sum . map (\[_,g,_] -> g)
-    "blue" -> do
-      colorData >>= return . sum . map (\[_,_,b] -> b)
-    _ -> return 0 -- TODO Deal with invalid color
-
-
-
+    "red" -> colorData >>= return . sum . map (\list -> case list of { [r,_,_] -> r; (r:_) -> r; _ -> 0 })
+    "green" -> colorData >>= return . sum . map (\list -> case list of { [_,g,_] -> g; [_,g] -> g; [_] -> 0; [] -> 0 })
+    "blue" -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
+    _ -> error "Invalid color"
 
 openBitmap :: FilePath -> IO [[Word8]]
 openBitmap file = do
