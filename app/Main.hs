@@ -84,8 +84,7 @@ openBitmap file = do
   bmpData <- B.readFile file
 
   -- File data
-  let fileType = B.take 2 bmpData
-  guard $ fileType == B.pack [0x42, 0x4D] -- Check if the file is internally a bitmap
+  guard $ (B.take 2 bmpData) == B.pack [0x42, 0x4D] -- Check if the file is internally a bitmap
 
   let offset = runGet getWord32le $ B.drop 10 bmpData -- Offset to the pixel array
       pixelData = B.drop (fromIntegral offset) bmpData -- Extract the pixel data
