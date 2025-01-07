@@ -1,7 +1,11 @@
 module Main where
 
 import System.Environment
+import System.Directory
+import System.FilePath
 import Data.Char
+import Control.Monad
+import Data.Either
 
 type FolderPath = String
 type Color = String
@@ -13,15 +17,22 @@ usage = "Usage: ./sort-color <folder path> <color> <order>"
 main :: IO ()
 main = do
   args <- getArgs
-  case isolateArgs args of
-    Right (f,c,o) -> putStrLn $ "Folder: " ++ f ++ ", Color: " ++ c ++ ", Order: " ++ show o
-    Left err -> mapM_ putStrLn [err, usage]
+
+  when (isLeft $ isolateArgs args) $ mapM_ putStrLn ["Invalid arguments", usage]
+  let Right (folder, color, order) = isolateArgs args
+
+  -- Select all the files in the folder that have the .bmp extension
+  bmpFiles <- filterM (doesFileExist . (folder ++)) . filter ((== ".bmp") . takeExtension) <$> listDirectory folder
+
+  print <$> bmpFiles
+
   return ()
 
 
-isolateArgs :: [String] -> Either String (String, String, Order)
+
+isolateArgs :: [String] -> Either String (FolderPath, Color, Order)
 isolateArgs [f,c,o] =
-  let folder = map toLower f
+  let folder = f -- No need to lowercase the folder path
       color = map toLower c
       order = map toLower o
   in case order of
