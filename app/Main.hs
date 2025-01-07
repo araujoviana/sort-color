@@ -32,13 +32,16 @@ main = do
 
   -- TODO Check if internal contents of bitmap are valid
 
-  sortedFiles <- mapM (appendColorCount color) bitmaps
+  sortedFiles <- mapM (appendColorCount color) bitmaps :: IO [(Int, FilePath)]
 
-  putStrLn $ "Sorted files: " ++ show sortedFiles
+  let rankedFiles = case order of
+        Asc -> L.sortBy (\(a,_) (b,_) -> compare a b) sortedFiles
+        Desc -> L.sortBy (\(a,_) (b,_) -> compare b a) sortedFiles
+      rankedFilesWithRank = zip [1..] $ map snd rankedFiles
+
+  putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFilesWithRank
 
   return ()
-
-
 
 -- | isolateArgs
 -- | Given a list of strings, returns a tuple containing the folder path, color and order
