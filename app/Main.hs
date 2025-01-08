@@ -4,10 +4,12 @@ import Control.Monad
 import Data.Binary.Get
 import Data.Char
 import Data.Either
+import Data.Function
 import Data.Word
 import System.Directory
 import System.Environment
 import System.FilePath
+import Text.Read
 import qualified Data.ByteString.Lazy as B
 import qualified Data.List as L
 import qualified Data.List.Split as S
@@ -19,18 +21,15 @@ data Order = Asc | Desc deriving (Read)
 type Args = (FolderPath, Color, Order) -- Command line arguments
 type RankedFiles = [(Int, FilePath)] -- List of ranked files with their rank and path
 
-usage :: String
-usage = "Usage: ./sort-color <folder path> <color> <order>"
-
 main :: IO ()
 main = do
   args <- getArgs
 
-  when (isLeft $ isolateArgs args ) $ putStrLn usage
+  when (isLeft $ isolateArgs args ) $ putStrLn $ fromLeft "" (isolateArgs args)
   let Right (folder, color, order) = isolateArgs args
 
   files <- getFilePaths folder
-  bitmaps <- getBitmaps files
+  bitmaps <- filterBitmapFiles files
 
   colorCountedBitmaps <- mapM (prependColorCount color) bitmaps
 
@@ -42,20 +41,26 @@ main = do
 
   putStrLn "Files renamed successfully"
 
-isolateArgs :: [String] -> Either String Args
+isolateArgs :: [String] -> Either String (String, Color, Order)
 isolateArgs [folder, color, order] =
-  Right (folder, read color, read order)
-isolateArgs _ = Left "Invalid number of arguments"
+  case (readMaybe (toTitleCase color), readMaybe (toTitleCase order)) of
+    (Just c, Just o) -> Right (folder, c, o)
+    _ -> Left "Invalid color or order. Valid colors (case-insensitive): Red, Green, Blue. Valid orders: Asc, Desc."
+isolateArgs _ = Left "Invalid number of arguments, usage: ./sort-color <folder path> <color> <order>"
+
+toTitleCase :: String -> String
+toTitleCase (x:xs) = toUpper x : map toLower xs
+toTitleCase []     = []
 
 getFilePaths :: FolderPath -> IO [FilePath]
 getFilePaths folder = map (folder </>) <$> listDirectory folder
 
-getBitmaps :: [FilePath] -> IO [FilePath]
-getBitmaps = filterM (return . L.isSuffixOf ".bmp")
+filterBitmapFiles :: [FilePath] -> IO [FilePath]
+filterBitmapFiles = filterM (return . L.isSuffixOf ".bmp")
 
 sortByOrder :: Order -> RankedFiles -> [FilePath]
-sortByOrder Asc xs = map snd $ L.sortBy (\(a,_) (b,_) -> compare a b) xs
-sortByOrder Desc xs = map snd $ L.sortBy (\(a,_) (b,_) -> compare b a) xs
+sortByOrder Asc xs = map snd $ L.sortBy (compare `on` fst) xs
+sortByOrder Desc xs = map snd $ L.sortBy (flip (compare `on` fst)) xs -- Reverse the order
 
 prependColorCount :: Color -> FilePath -> IO (Int, FilePath)
 prependColorCount color file = do

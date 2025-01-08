@@ -25,6 +25,7 @@ executable sort-color
 		      filepath,
 		      bytestring,
 		      split,
+		      text,
 		      binary
     hs-source-dirs:   app
     default-language: GHC2021
