@@ -2,91 +2,107 @@ module Main where
 
 import Control.Monad
 import Data.Binary.Get
-import Data.Bits
 import Data.Char
 import Data.Either
-import Data.List as L
-import Data.List.Split as S
+import Data.Function
 import Data.Word
 import System.Directory
 import System.Environment
 import System.FilePath
-import System.IO
+import Text.Read
 import qualified Data.ByteString.Lazy as B
+import qualified Data.List as L
+import qualified Data.List.Split as S
 
-type FolderPath = String -- Path to the folder containing the files
-type Color = String
-data Order = Asc | Desc deriving (Show, Read)
+type FolderPath = String -- Path to the folder containing the bitmaps
+data Color = Red | Green | Blue deriving (Read)
+data Order = Asc | Desc deriving (Read)
 
-usage :: String
-usage = "Usage: ./sort-color <folder path> <color> <order>"
+type Args = (FolderPath, Color, Order) -- Command line arguments
+type RankedFiles = [(Int, FilePath)] -- List of ranked files with their rank and path
 
 main :: IO ()
 main = do
   args <- getArgs
-  when (isLeft $ isolateArgs args ) $ mapM_ putStrLn ["Invalid arguments", "Usage: ./sort-color <folder path> <color> <order>"]
+  when (isLeft $ isolateArgs args ) $ putStrLn $ fromLeft "" (isolateArgs args)
   let Right (folder, color, order) = isolateArgs args
 
-  files <- map (folder </>) <$> listDirectory folder
-  bitmaps <- filterM (return . L.isSuffixOf ".bmp") files
+  files <- getFilePaths folder
+  bitmaps <- filterBitmapFiles files
 
-  -- TODO Check if internal contents of bitmap are valid
+  colorCountedBitmaps <- mapM (prependColorCount color) bitmaps
 
-  sortedFiles <- mapM (appendColorCount color) bitmaps :: IO [(Int, FilePath)]
+  let sortedFiles = zip [1..] $ sortByOrder order colorCountedBitmaps
 
-  let rankedFiles = case order of
-        Asc -> L.sortBy (\(a,_) (b,_) -> compare a b) sortedFiles
-        Desc -> L.sortBy (\(a,_) (b,_) -> compare b a) sortedFiles
-      rankedFilesWithRank = zip [1..] $ map snd rankedFiles
+  putStrLn "Ranking:" >> mapM_ (putStrLn . show) sortedFiles
 
-  putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFilesWithRank
+  renameBitmaps sortedFiles folder
 
-  forM_ rankedFilesWithRank $ \(rank, file) -> do
-    let filename = takeFileName file
-    let newFile = folder </> show rank <> "-" <> filename
-    renameFile file newFile
+  putStrLn "Files renamed successfully"
 
-  return ()
+isolateArgs :: [String] -> Either String (String, Color, Order)
+isolateArgs [folder, color, order] =
+  case (readMaybe (toTitleCase color), readMaybe (toTitleCase order)) of
+    (Just c, Just o) -> Right (folder, c, o)
+    _ -> Left "Invalid color or order. Valid colors (case-insensitive): Red, Green, Blue. Valid orders: Asc, Desc."
+isolateArgs _ = Left "Invalid number of arguments, usage: ./sort-color <folder path> <color> <order>"
 
--- | isolateArgs
--- | Given a list of strings, returns a tuple containing the folder path, color and order
--- | If the number of arguments is not 3, return an error message
--- | If the order is not "asc" or "desc", return an error message
--- | Otherwise, return the folder path, color and order
-isolateArgs :: [String] -> Either String (FolderPath, Color, Order)
-isolateArgs [f,c,o] =
-  let folder = f -- No need to lowercase the folder path
-      color = map toLower c
-      order = map toLower o
-  in case order of
-    "asc" -> Right (folder, color, Asc)
-    "desc" -> Right (folder, color, Desc)
-    _ -> Left "Invalid order"
-isolateArgs _ = Left "Invalid number of arguments"
+toTitleCase :: String -> String
+toTitleCase (x:xs) = toUpper x : map toLower xs
+toTitleCase []     = []
 
+getFilePaths :: FolderPath -> IO [FilePath]
+getFilePaths folder = map (folder </>) <$> listDirectory folder
 
-appendColorCount :: String -> FilePath -> IO (Int, FilePath)
-appendColorCount color file = do
+filterBitmapFiles :: [FilePath] -> IO [FilePath]
+filterBitmapFiles = filterM (return . L.isSuffixOf ".bmp")
+
+-- Reimplementation using radix sort
+sortByOrder :: Order -> RankedFiles -> [FilePath]
+sortByOrder order xs =
+  let sortingOrder = case order of
+        Asc -> id
+        Desc -> reverse
+      sortedList = sortByOrder' (map fst xs) (map snd xs)
+  in sortingOrder sortedList
+
+sortByOrder' :: [Int] -> [FilePath] -> [FilePath]
+sortByOrder' [] _ = []
+sortByOrder' _ [] = []
+sortByOrder' keys filePaths =
+  let buckets = foldr (\(key, file) acc ->
+                         let index = key `mod` 10
+                         in take index acc ++ [file : acc !! index] ++ drop (index + 1) acc
+                      )
+                      (replicate 10 [])
+                      (zip keys filePaths)
+      sortedBuckets = map reverse buckets
+      flattened = concat sortedBuckets
+  in flattened
+
+prependColorCount :: Color -> FilePath -> IO (Int, FilePath)
+prependColorCount color file = do
   count <- countColor color file
   return (count, file)
 
-
 countColor :: Color -> FilePath -> IO Int
 countColor color file = do
+
   -- Extract the pixel data from the bitmap as a list of RGB trios
-  let colorData = ((map fromIntegral) <$>) <$> openBitmap file :: IO [[Int]]
+  let colorData = do
+        bitmapData <- openBitmap file
+        return $ map (map fromIntegral) bitmapData -- Convert the Word8 values to Int
 
   colorDataLength <- length <$> colorData
 
   -- HACK This deals with non trios of RGB values by returning 0
   case color of
-    "red" -> colorData >>= return . sum . map (\list -> case list of { [r,_,_] -> r; (r:_) -> r; _ -> 0 })
+    Red -> colorData >>= return . sum . map (\list -> case list of { [r,_,_] -> r; (r:_) -> r; _ -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
-    "green" -> colorData >>= return . sum . map (\list -> case list of { [_,g,_] -> g; [_,g] -> g; [_] -> 0; [] -> 0 })
+    Green -> colorData >>= return . sum . map (\list -> case list of { [_,g,_] -> g; [_,g] -> g; [_] -> 0; [] -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
-    "blue" -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
+    Blue -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
-    _ -> error "Invalid color"
 
 openBitmap :: FilePath -> IO [[Word8]]
 openBitmap file = do
@@ -100,4 +116,9 @@ openBitmap file = do
   -- Colors are store in BGR format in the bitmap, so we need to reverse the order of the bytes
   return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData
 
-
+renameBitmaps :: RankedFiles -> FilePath -> IO ()
+renameBitmaps rankedFiles folder =
+  forM_ rankedFiles $ \(rank, file) -> do
+    let filename = takeFileName file
+    let newFile = folder </> show rank <> "-" <> filename
+    renameFile file newFile
