@@ -12,7 +12,6 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.List as L
 import qualified Data.List.Split as S
 
-
 type FolderPath = String -- Path to the folder containing the bitmaps
 data Color = Red | Green | Blue deriving (Read)
 data Order = Asc | Desc deriving (Read)
@@ -45,21 +44,8 @@ main = do
 
 isolateArgs :: [String] -> Either String Args
 isolateArgs [folder, color, order] =
-  Right (folder, getColor color, getOrder order)
+  Right (folder, read color, read order)
 isolateArgs _ = Left "Invalid number of arguments"
-
-getOrder :: String -> Order
-getOrder s = case s of
-  "asc" -> Asc
-  "desc" -> Desc
-  _ -> error "Invalid order"
-
-getColor :: String -> Color
-getColor c = case c of
-  "red" -> Red
-  "green" -> Green
-  "blue" -> Blue
-  _ -> error "Invalid color"
 
 getFilePaths :: FolderPath -> IO [FilePath]
 getFilePaths folder = map (folder </>) <$> listDirectory folder
@@ -91,7 +77,6 @@ countColor color file = do
                   >>= \total -> return (total `div` colorDataLength)
     Blue -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
-    _ -> error "Invalid color"
 
 openBitmap :: FilePath -> IO [[Word8]]
 openBitmap file = do
@@ -104,7 +89,6 @@ openBitmap file = do
 
   -- Colors are store in BGR format in the bitmap, so we need to reverse the order of the bytes
   return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData
-
 
 renameBitmaps :: RankedFiles -> FilePath -> IO ()
 renameBitmaps rankedFiles folder =
