@@ -69,8 +69,11 @@ prependColorCount color file = do
 
 countColor :: Color -> FilePath -> IO Int
 countColor color file = do
+  
   -- Extract the pixel data from the bitmap as a list of RGB trios
-  let colorData = ((map fromIntegral) <$>) <$> openBitmap file :: IO [[Int]]
+  let colorData = do
+        bitmapData <- openBitmap file
+        return $ map (map fromIntegral) bitmapData -- Convert the Word8 values to Int
 
   colorDataLength <- length <$> colorData
 
