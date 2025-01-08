@@ -48,6 +48,19 @@ isolateArgs [folder, color, order] =
   Right (folder, getColor color, getOrder order)
 isolateArgs _ = Left "Invalid number of arguments"
 
+getOrder :: String -> Order
+getOrder s = case s of
+  "asc" -> Asc
+  "desc" -> Desc
+  _ -> error "Invalid order"
+
+getColor :: String -> Color
+getColor c = case c of
+  "red" -> Red
+  "green" -> Green
+  "blue" -> Blue
+  _ -> error "Invalid color"
+
 getFilePaths :: FolderPath -> IO [FilePath]
 getFilePaths folder = map (folder </>) <$> listDirectory folder
 
@@ -72,11 +85,11 @@ countColor color file = do
 
   -- HACK This deals with non trios of RGB values by returning 0
   case color of
-    "red" -> colorData >>= return . sum . map (\list -> case list of { [r,_,_] -> r; (r:_) -> r; _ -> 0 })
+    Red -> colorData >>= return . sum . map (\list -> case list of { [r,_,_] -> r; (r:_) -> r; _ -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
-    "green" -> colorData >>= return . sum . map (\list -> case list of { [_,g,_] -> g; [_,g] -> g; [_] -> 0; [] -> 0 })
+    Green -> colorData >>= return . sum . map (\list -> case list of { [_,g,_] -> g; [_,g] -> g; [_] -> 0; [] -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
-    "blue" -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
+    Blue -> colorData >>= return . sum . map (\list -> case list of { [_,_,b] -> b; [_,b] -> b; [_] -> 0; [] -> 0 })
                   >>= \total -> return (total `div` colorDataLength)
     _ -> error "Invalid color"
 
