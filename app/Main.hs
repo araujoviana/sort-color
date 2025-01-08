@@ -14,10 +14,11 @@ import qualified Data.List.Split as S
 
 
 type FolderPath = String -- Path to the folder containing the bitmaps
-type Color = String
+data Color = Red | Green | Blue deriving (Read)
 data Order = Asc | Desc deriving (Read)
 
 type Args = (FolderPath, Color, Order) -- Command line arguments
+type RankedFiles = [(Int, FilePath)] -- List of ranked files with their rank and path
 
 usage :: String
 usage = "Usage: ./sort-color <folder path> <color> <order>"
@@ -42,16 +43,9 @@ main = do
 
   putStrLn "Files renamed successfully"
 
-
-isolateArgs :: [String] -> Either String (FolderPath, Color, Order)
-isolateArgs [f,c,o] =
-  let folder = f -- No need to lowercase the folder path
-      color = map toLower c
-      order = map toLower o
-  in case order of
-    "asc" -> Right (folder, color, Asc)
-    "desc" -> Right (folder, color, Desc)
-    _ -> Left "Invalid order"
+isolateArgs :: [String] -> Either String Args
+isolateArgs [folder, color, order] =
+  Right (folder, getColor color, getOrder order)
 isolateArgs _ = Left "Invalid number of arguments"
 
 getFilePaths :: FolderPath -> IO [FilePath]
@@ -60,11 +54,11 @@ getFilePaths folder = map (folder </>) <$> listDirectory folder
 getBitmaps :: [FilePath] -> IO [FilePath]
 getBitmaps = filterM (return . L.isSuffixOf ".bmp")
 
-sortByOrder :: Order -> [(Int, FilePath)] -> [FilePath]
+sortByOrder :: Order -> RankedFiles -> [FilePath]
 sortByOrder Asc xs = map snd $ L.sortBy (\(a,_) (b,_) -> compare a b) xs
 sortByOrder Desc xs = map snd $ L.sortBy (\(a,_) (b,_) -> compare b a) xs
 
-prependColorCount :: String -> FilePath -> IO (Int, FilePath)
+prependColorCount :: Color -> FilePath -> IO (Int, FilePath)
 prependColorCount color file = do
   count <- countColor color file
   return (count, file)
@@ -99,7 +93,7 @@ openBitmap file = do
   return $ map reverse $ S.chunksOf 3 $ B.unpack pixelData
 
 
-renameBitmaps :: [(Int, FilePath)] -> FilePath -> IO ()
+renameBitmaps :: RankedFiles -> FilePath -> IO ()
 renameBitmaps rankedFiles folder =
   forM_ rankedFiles $ \(rank, file) -> do
     let filename = takeFileName file
