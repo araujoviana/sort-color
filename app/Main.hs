@@ -58,9 +58,28 @@ getFilePaths folder = map (folder </>) <$> listDirectory folder
 filterBitmapFiles :: [FilePath] -> IO [FilePath]
 filterBitmapFiles = filterM (return . L.isSuffixOf ".bmp")
 
+-- Reimplementation using radix sort
 sortByOrder :: Order -> RankedFiles -> [FilePath]
-sortByOrder Asc xs = map snd $ L.sortBy (compare `on` fst) xs
-sortByOrder Desc xs = map snd $ L.sortBy (flip (compare `on` fst)) xs -- Reverse the order
+sortByOrder order xs =
+  let sortingOrder = case order of
+        Asc -> id
+        Desc -> reverse
+      sortedList = sortByOrder' (map fst xs) (map snd xs)
+  in sortingOrder sortedList
+
+sortByOrder' :: [Int] -> [FilePath] -> [FilePath]
+sortByOrder' [] _ = []
+sortByOrder' _ [] = []
+sortByOrder' keys filePaths =
+  let buckets = foldr (\(key, file) acc ->
+                         let index = key `mod` 10
+                         in take index acc ++ [file : acc !! index] ++ drop (index + 1) acc
+                      )
+                      (replicate 10 [])
+                      (zip keys filePaths)
+      sortedBuckets = map reverse buckets
+      flattened = concat sortedBuckets
+  in flattened
 
 prependColorCount :: Color -> FilePath -> IO (Int, FilePath)
 prependColorCount color file = do
@@ -69,7 +88,7 @@ prependColorCount color file = do
 
 countColor :: Color -> FilePath -> IO Int
 countColor color file = do
-  
+
   -- Extract the pixel data from the bitmap as a list of RGB trios
   let colorData = do
         bitmapData <- openBitmap file
