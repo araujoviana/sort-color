@@ -35,11 +35,11 @@ main = do
 
   colorCountedBitmaps <- mapM (prependColorCount color) bitmaps
 
-  let rankedFiles = zip [1..] $ sortByOrder order colorCountedBitmaps
+  let sortedFiles = zip [1..] $ sortByOrder order colorCountedBitmaps
 
-  putStrLn "Ranking:" >> mapM_ (putStrLn . show) rankedFiles
+  putStrLn "Ranking:" >> mapM_ (putStrLn . show) sortedFiles
 
-  renameBitmaps rankedFiles folder
+  renameBitmaps sortedFiles folder
 
   putStrLn "Files renamed successfully"
 
