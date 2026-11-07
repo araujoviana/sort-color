@@ -1,3 +1,5 @@
+> 📦 **Archived (November 2026).** A Haskell exercise (January 2025): a CLI that ranks BMP images by color intensity and renames them. Kept as a read-only record of what I was working on at the time; it is no longer maintained.
+
 # sort-color
 
 A command-line tool written in Haskell that sorts BMP images in a folder based on their color distribution and *renames* them in sorted order.
